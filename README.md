@@ -90,13 +90,24 @@ Multiavatar is coded in vanilla JavaScript. Only a single library (SHA-256) is u
 
 To test different parts manually, you can uncomment them in the code.
 
-Also, the Multiavatar script accepts the following three paramenters: `string`, `sansEnv`, `ver`.
+Also, the Multiavatar script accepts the following four parameters: `string`, `sansEnv`, `ver`, `options`.
 
-`string` - The text string that will be converted into the avatar. This parameter is required, the other two are optional.
+`string` - The text string that will be converted into the avatar. This parameter is required, the others are optional.
 
 `sansEnv` - If this is `true`, the script returns the final avatar without the circle background (environment part).
 
 `ver` - Pass an object to force a specific initial version, for example: `multiavatar('test', false, {'part': '01', 'theme': 'A'});`
+
+`options` - Pass optional filters to constrain generated avatars:
+- `gender`: `'male' | 'female' | 'any'` (default `'any'`)
+- `skinTone`: `'light' | 'medium' | 'dark' | 'any'` (default `'any'`)
+
+Example:
+`multiavatar('test', false, undefined, {'gender': 'female', 'skinTone': 'medium'});`
+
+Backward compatibility:
+You can also pass filters as the third argument:
+`multiavatar('test', false, {'gender': 'female', 'skinTone': 'dark'});`
 
 While the algorithm generates 12 billion unique avatars, some parts (eyes, mouth) are still similar, so it means that currently there are less than 12 billion unique avatars. It is trivial to make all avatars unique by slightly changing the color, but visually that would not make a difference. That's why instead of forcing a formal solution, some parts are left unfinished intentionally.
 

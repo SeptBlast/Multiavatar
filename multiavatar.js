@@ -5,7 +5,7 @@
 // Copyright: Gie Katon (2020-2021) (https://giekaton.com)
 
 
-function multiavatar (string, sansEnv, ver) {
+function multiavatar (string, sansEnv, ver, opts) {
   string += '';
 
   var themes = {
@@ -688,6 +688,19 @@ function multiavatar (string, sansEnv, ver) {
   c[d+n]|0;else{var r=a[n-15],g=a[n-2];a[n]=((r<<25|r>>>7)^(r<<14|r>>>18)^r>>>3)+a[n-7]+((g<<15|g>>>17)^(g<<13|g>>>19)^g>>>10)+a[n-16]}r=l+((p<<26|p>>>6)^(p<<21|p>>>11)^(p<<7|p>>>25))+(p&j^~p&k)+q[n]+a[n];g=((e<<30|e>>>2)^(e<<19|e>>>13)^(e<<10|e>>>22))+(e&f^e&m^f&m);l=k;k=j;j=p;p=h+r|0;h=m;m=f;f=e;e=r+g|0}b[0]=b[0]+e|0;b[1]=b[1]+f|0;b[2]=b[2]+m|0;b[3]=b[3]+h|0;b[4]=b[4]+p|0;b[5]=b[5]+j|0;b[6]=b[6]+k|0;b[7]=b[7]+l|0},_doFinalize:function(){var a=this._data,d=a.words,b=8*this._nDataBytes,e=8*a.sigBytes;
   d[e>>>5]|=128<<24-e%32;d[(e+64>>>9<<4)+14]=h.floor(b/4294967296);d[(e+64>>>9<<4)+15]=b;a.sigBytes=4*d.length;this._process();return this._hash},clone:function(){var a=g.clone.call(this);a._hash=this._hash.clone();return a}});s.SHA256=g._createHelper(f);s.HmacSHA256=g._createHmacHelper(f)})(Math);
 
+  // Backward compatibility: allow filters as 3rd argument
+  if (
+    typeof opts == 'undefined' &&
+    typeof ver != 'undefined' &&
+    typeof ver == 'object' &&
+    typeof ver.part == 'undefined' &&
+    typeof ver.theme == 'undefined' &&
+    (typeof ver.gender != 'undefined' || typeof ver.skinTone != 'undefined')
+  ) {
+    opts = ver;
+    ver = undefined;
+  }
+
   var hash = '';
   if (string.length == 0) return hash;
 
@@ -696,6 +709,95 @@ function multiavatar (string, sansEnv, ver) {
 
   hash = sha256Numbers.substring(0, 12);
 
+
+  var filters = opts || {};
+  var genderFilter = filters.gender || 'any';
+  var skinToneFilter = filters.skinTone || 'any';
+
+  // Character metadata used for filtering
+  var characterGender = {
+    "00": "neutral",
+    "01": "female",
+    "02": "female",
+    "03": "male",
+    "04": "male",
+    "05": "male",
+    "06": "male",
+    "07": "neutral",
+    "08": "neutral",
+    "09": "female",
+    "10": "male",
+    "11": "neutral",
+    "12": "male",
+    "13": "male",
+    "14": "male",
+    "15": "neutral"
+  };
+
+  // Per-character head theme tone map (A/B/C)
+  var headToneMap = {
+    "00": { "A": "light", "B": "light", "C": "medium" },
+    "01": { "A": "dark", "B": "light", "C": "medium" },
+    "02": { "A": "light", "B": "medium", "C": "dark" },
+    "03": { "A": "light", "B": "light", "C": "light" },
+    "04": { "A": "light", "B": "light", "C": "medium" },
+    "05": { "A": "light", "B": "light", "C": "dark" },
+    "06": { "A": "medium", "B": "medium", "C": "medium" },
+    "07": { "A": "medium", "B": "medium", "C": "dark" },
+    "08": { "A": "medium", "B": "dark", "C": "dark" },
+    "09": { "A": "medium", "B": "medium", "C": "medium" },
+    "10": { "A": "medium", "B": "medium", "C": "light" },
+    "11": { "A": "medium", "B": "dark", "C": "dark" },
+    "12": { "A": "medium", "B": "medium", "C": "dark" },
+    "13": { "A": "dark", "B": "medium", "C": "dark" },
+    "14": { "A": "medium", "B": "medium", "C": "dark" },
+    "15": { "A": "dark", "B": "dark", "C": "medium" }
+  };
+
+  function normalizeGender(value) {
+    if (value == 'male' || value == 'female') return value;
+    return 'any';
+  }
+
+  function normalizeSkinTone(value) {
+    if (value == 'light' || value == 'medium' || value == 'dark') return value;
+    return 'any';
+  }
+
+  genderFilter = normalizeGender(genderFilter);
+  skinToneFilter = normalizeSkinTone(skinToneFilter);
+
+  function getAllowedPartVersions(gender) {
+    if (gender == 'any') {
+      return ["00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15"];
+    }
+
+    var allowed = [];
+    for (var id in characterGender) {
+      if (characterGender[id] == gender || characterGender[id] == 'neutral') {
+        allowed.push(id);
+      }
+    }
+    if (allowed.length == 0) return ["00","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15"];
+    return allowed;
+  }
+
+  function pickAllowedThemeForTone(partV, currentTheme, skinTone, seed) {
+    if (skinTone == 'any') return currentTheme;
+    var toneThemes = headToneMap[partV];
+    if (typeof toneThemes == 'undefined') return currentTheme;
+
+    var matches = [];
+    for (var t in toneThemes) {
+      if (toneThemes[t] == skinTone) matches.push(t);
+    }
+
+    if (matches.length == 0) return currentTheme;
+    if (matches.length == 1) return matches[0];
+    return matches[seed % matches.length];
+  }
+
+  var allowedPartVersions = getAllowedPartVersions(genderFilter);
 
   // parts
   var p = [];
@@ -736,21 +838,32 @@ function multiavatar (string, sansEnv, ver) {
 
   // Get parts (range 0-15) + define themes
   for (var part in p) {
-    var nr = p[part];
+    var nr = parseInt(p[part], 10);
+    var theme = 'A';
+    var baseNr = nr;
 
     if (nr > 31) {
-      nr = nr - 32 + '';
-      if (nr.length == 1) nr = '0' + nr;
-      p[part] = nr + 'C';
+      baseNr = nr - 32;
+      theme = 'C';
     }
     else if (nr > 15) { 
-      nr = nr - 16 + '';
-      if (nr.length == 1) nr = '0' + nr;
-      p[part] = nr + 'B';
-    } else {
-      if ((nr+'').length == 1) p[part] = '0' + nr + 'A';
-      else p[part] = nr + 'A';
+      baseNr = nr - 16;
+      theme = 'B';
     }
+
+    var partV = '';
+    if (allowedPartVersions.length > 0) {
+      partV = allowedPartVersions[nr % allowedPartVersions.length];
+    } else {
+      partV = baseNr + '';
+      if (partV.length == 1) partV = '0' + partV;
+    }
+
+    if (part == 'head') {
+      theme = pickAllowedThemeForTone(partV, theme, skinToneFilter, nr);
+    }
+
+    p[part] = partV + theme;
   }
 
 
@@ -762,9 +875,16 @@ function multiavatar (string, sansEnv, ver) {
     var theme = p[part].substring(2,3);
     // console.log(part, partV, theme);
 
-    if (typeof(ver) != 'undefined') {
-      partV = ver.part;
-      theme = ver.theme;
+    if (
+      typeof(ver) != 'undefined' &&
+      typeof(ver) == 'object'
+    ) {
+      if (typeof(ver.part) != 'undefined') {
+        partV = ver.part;
+      }
+      if (typeof(ver.theme) != 'undefined') {
+        theme = ver.theme;
+      }
     }
 
     // Freeze a single base version
