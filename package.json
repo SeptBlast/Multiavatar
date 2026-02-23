@@ -1,11 +1,11 @@
 {
-  "name": "@multiavatar/multiavatar",
+  "name": "@imdevesh/multiavatar",
   "version": "1.0.8",
   "description": "Multicultural Avatar Generator",
   "author": "Gie Katon <git@giekaton.com> (http://giekaton.com/)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/multiavatar/Multiavatar.git"
+    "url": "https://github.com/SeptBlast/Multiavatar.git"
   },
   "type": "module",
   "main": "./dist/commonjs/index.js",
